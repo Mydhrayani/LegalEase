@@ -1,0 +1,7 @@
+streamlit
+fastapi
+uvicorn
+google-generativeai
+python-docx
+fpdf2
+python-dotenv
