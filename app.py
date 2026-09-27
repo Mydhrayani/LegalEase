@@ -1,41 +1,27 @@
 import streamlit as st
 import requests
-from formatter import format_docx, format_pdf, format_html_preview
+from formatter import sanitize_text, format_html_preview, format_docx, format_pdf
 
-# 3. User Interaction
-st.title("LegalEase: AI-Powered Legal Document Generator")
-document_type = st.text_input("Document Type")
-parties = st.text_input("Parties Involved")
-terms = st.text_area("Terms and Conditions")
-dates = st.text_input("Effective Date")
+WEB_LOGO_PATH = "https://via.placeholder.com/300x100?text=LegalEase"
 
-if "generated_text" not in st.session_state:
-    st.session_state.generated_text = "Sample Legal Document"
-if "show_edit" not in st.session_state:
-    st.session_state.show_edit = True
+st.set_page_config(page_title="LegalEase", layout="centered")
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.image(WEB_LOGO_PATH, use_container_width=True)
+
+st.markdown("<h2 style='text-align: center;'>AI Legal Document Generator</h2>", unsafe_allow_html=True)
+
+document_type = st.text_input("document_type")
+parties = st.text_area("parties")
+terms = st.text_area("terms")
+dates = st.text_input("dates")
 
 if st.button("Generate Document"):
-    # Send to backend
-    try:
-        response = requests.post("http://localhost:8000/generate", json={
-            "document_type": document_type,
-            "parties": parties,
-            "terms": terms,
-            "dates": dates
-        })
-        st.session_state.generated_text = response.json().get("document", "Generated")
-    except:
-        st.session_state.generated_text = f"Generated {document_type} for {parties}"
-    st.session_state.show_edit = True
-
-generated_text = st.session_state.generated_text
-
-# 4. Editable Document & Download
-if st.session_state.get("show_edit"):
+    response = requests.post("http://localhost:8000/generate", json={"document_type": document_type, "parties": parties, "terms": terms, "dates": dates})
+    generated_text = sanitize_text(response.json()["document"])
+    styled_html = format_html_preview(generated_text)
+    st.markdown(styled_html, unsafe_allow_html=True)
     edited_text = st.text_area("Edit Document Below:", generated_text, height=300)
-    st.session_state.generated_text = edited_text
-    generated_text = edited_text
-    st.download_button("📄 Download as .TXT", data=generated_text, file_name="doc.txt")
-    st.download_button("📝 Download as .DOCX", data=format_docx(generated_text, document_type), file_name="doc.docx")
-    st.download_button("📕 Download as .PDF", data=format_pdf(generated_text, document_type), file_name="doc.pdf")
-    st.markdown(format_html_preview(generated_text), unsafe_allow_html=True)
+    st.download_button("📄 Download as .TXT", data=generated_text, file_name=f"{document_type.replace(' ', '_').lower()}_document.txt")
+    st.download_button("📝 Download as .DOCX", data=format_docx(generated_text, document_type), file_name=f"{document_type.replace(' ', '_').lower()}_document.docx")
+    st.download_button("📕 Download as .PDF", data=format_pdf(generated_text, document_type), file_name=f"{document_type.replace(' ', '_').lower()}_document.pdf")
